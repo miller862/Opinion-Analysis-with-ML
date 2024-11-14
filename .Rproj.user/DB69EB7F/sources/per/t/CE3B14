@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1731261611395.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2217120456",
+    "id" : "CE3B14",
+    "lastKnownWriteTime" : 1731352737,
+    "last_content_update" : 1731352737,
+    "path" : "C:/Users/Manuel/Desktop/academico/Maestria/sist inf y bases de datos/unidad5/MLenR/xgboost.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "86,0",
+        "scrollLine" : "51"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
