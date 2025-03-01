@@ -3,29 +3,40 @@ library(readxl)
 library(labelled)
 library(skimr)
 library(psych)
+library(openxlsx)
 
 
-survey110<-read_excel("data/EncuestaDB.xlsx")
-
+survey134<-read_excel("../data/survey134.xlsx")
 glimpse(survey110)
 
-nombres_originales <- colnames(survey110)
 
-colnames(survey110)
+nombres_originales134 <- colnames(survey134)
 
-colnames(survey110)<-c("TIEMPO","HIJOS","N_HIJOS_HOY", "BUSCA_HIJOS","N_BUSCA_HIJOS","SS","NO_HIJOS_PQ","TH_EDAD","NH_EDAD",
+#colnames(survey110)
+
+
+
+colnames(survey134)<-c("TIEMPO","HIJOS","N_HIJOS_HOY", "BUSCA_HIJOS","N_BUSCA_HIJOS","SS","NO_HIJOS_PQ","TH_EDAD","NH_EDAD",
                        "UP","MASCOTHIJO","GORRA","EF","EJERCITO","TARIFAS","EMPRESARIOS", "MALVINAS","EF_QUEES","EL_PROBLEMA",
                        "DESIGUALDAD","NO_PIENSAN","EEUU","PALESTINA","ISRAEL","UCRANIA","RUSIA","BOLIVIA","CHINA","INGLATERRA",
                        "GENERO","EDAD","ESTUDIO","PROV","SOCIECON", "PROGRAMA","NOTICIAS","TRABAJA","GRUPO","PROLE","MILEI","ETIQUETA")
 
-survey110 <- set_variable_labels(survey110, .labels = setNames(nombres_originales, colnames(survey110)))
 
-lista_motivos <-unique(survey110$NO_HIJOS_PQ)
-unique(clean$NO_HIJOS_PQ)
 
-clean <- survey110 %>% 
+
+survey134 <- set_variable_labels(survey134, .labels = setNames(nombres_originales134, colnames(survey134)))
+
+
+################# 
+#recargorizacion para survey 134
+clean134 <- survey134 %>% 
   mutate(
-    HIJOS = ifelse(survey110$HIJOS == "SI", 1, 0),
+    HIJOS = ifelse(survey134$HIJOS == "SI", 1, 0),
+    BUSCA_HIJOS = case_when(
+      BUSCA_HIJOS == "NO LO SE" ~ NA_real_,
+      BUSCA_HIJOS == "SI" ~ 1,
+      BUSCA_HIJOS == "NO" ~ 0
+    ),
     N_BUSCA_HIJOS = case_when(
       N_BUSCA_HIJOS == "0" ~ 0,
       N_BUSCA_HIJOS == "1" ~ 1,
@@ -51,7 +62,7 @@ clean <- survey110 %>%
       NO_HIJOS_PQ == "Aún debatimos en la pareja. No Está cerrado el tema" ~ "que no encuentro la pareja indicada",
       NO_HIJOS_PQ %in% c("Que los quiero tener cuando sea un poco más grande", "La edad que tengo") ~ "NO APLICA: QUIERO TENER HIJOS O YA LOS TENGO",
       TRUE ~ as.character(NO_HIJOS_PQ)  # Mantiene los valores originales que no se especificaron
-      ),
+    ),
     NO_HIJOS_PQ = as.factor(NO_HIJOS_PQ),  # Convertir a factor al final
     
     # Variables de acuerdo-desacuerdo
@@ -60,13 +71,14 @@ clean <- survey110 %>%
     GORRA = ifelse(GORRA == "DE ACUERDO", 1, 0),
     EF = ifelse(EF == "DE ACUERDO", 1, 0),
     EJERCITO = ifelse(EJERCITO == "DE ACUERDO", 1, 0),
-    TARIFAS = ifelse(TARIFAS == "DE ACUERDO", 1, 0),
+    TARIFAS = ifelse(TARIFAS == "DE ACUERDO", 1, 0), #PAGABAMOS MUY POCO = 1, DESACUERDO 2
     EMPRESARIOS = ifelse(EMPRESARIOS == "DE ACUERDO", 1, 0),
     
     # SIGNIFICANTES
-    MALVINAS = ifelse(MALVINAS == 1, 1, 0),
-    EF_QUEES = ifelse(EF_QUEES == 1, 1, 0),
+    MALVINAS = ifelse(MALVINAS == 1, 1, 0),#HEROES =1 "VICTIMAS=0
+    EF_QUEES = ifelse(EF_QUEES == 1, 1, 0), #CRIPTO 1  #AHORRAR 0  
     EL_PROBLEMA = ifelse(EL_PROBLEMA == "Hay pocos que tienen mucho dinero", 1, 0),
+    # DESIGUALDAD =1 #NO PIENSAN 0
     
     NO_PIENSAN = case_when(
       NO_PIENSAN == "Tiene mas educación o dinero que yo" ~ 1,
@@ -164,47 +176,33 @@ clean <- survey110 %>%
       TRUE ~ as.character(ETIQUETA)  # Mantiene los valores originales que no se especificaron
     ),
     ETIQUETA = as.factor(ETIQUETA)
-    ) %>% 
-  select(-TIEMPO)
+  ) %>% 
+  select(-TIEMPO,-PROV)
+
+write.xlsx(clean134, file = "134NODUMMY.xlsx")
+##########Creando algunas dummies###########################################################################
+unique(clean$BUSCA_HIJOS)
+# Cargar librería
+library(fastDummies)
+
+# Aplicar One-Hot Encoding <AQUI SE ELIMINA UNA MODALIDAD POR VARIABLE PARA REDUCIR COLINEALIDAD>
+#dumificada <- dummy_cols(clean, select_columns = c("PROLE","SS","PROGRAMA", "NOTICIAS", "GRUPO", "NO_HIJOS_PQ"), remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+
+dumificada134 <- dummy_cols(clean134, select_columns = c("PROLE","SS","PROGRAMA", "NOTICIAS", "GRUPO", "NO_HIJOS_PQ"), remove_first_dummy = TRUE, remove_selected_columns = TRUE)
+
+kmeans134<- dummy_cols(clean134, select_columns = c("PROLE","SS","PROGRAMA", "NOTICIAS", "GRUPO", "NO_HIJOS_PQ"), remove_first_dummy = FALSE, remove_selected_columns = TRUE)
 
 #EVALUACION DE DATOS
 summary(clean)
 str(clean)
-skim(clean)
+
+skim(dumificada)
 
 
 ####################################################       ONE HOT ENCODING    #############################
 
-library(data.table)
-library(mltools)
-
-# Convertir a data.table
-clean_datatable <- as.data.table(clean)
-
-# Aplicar one-hot encoding solo a las columnas necesarias
-data_encoded <- one_hot(clean_datatable, cols = c("BUSCA_HIJOS", "SS", "NO_HIJOS_PQ","PROGRAMA","NOTICIAS","GRUPO",
-                                                  "PROLE"))
-
-data_encoded<-data_encoded %>%
-  select(-PROV)
-
-## analisis
-
-#promedio de edad del primer hijo de quines son padres vs de quienes piensan serlo
-
-psych::describe(clean$TH_EDAD)  #28.47
-psych::describe(clean$NH_EDAD)  #33.34
-
-table(clean$BUSCA_HIJOS,clean$ETIQUETA)
-
-table(clean$ETIQUETA,clean$GORRA)
-
-prop.table(table(clean$BUSCA_HIJOS,clean$GORRA),2)
-
-
-##### TEST XGBOOST #####
-skim(data_encoded)
-
+write.xlsx(dumificada134, file = "D134.xlsx")
+write.xlsx(kmeans134, file = "kmeans134.xlsx")
 
 
 
